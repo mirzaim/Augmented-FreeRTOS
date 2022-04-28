@@ -101,6 +101,8 @@
 // example
 // void vTask1();
 
+void vTask(void *);
+void motherTask(void *);
 
 #endif
 
@@ -113,6 +115,7 @@ int main(void)
     // search and find xTaskCreate how it is work
     //	xTaskCreate( vTask1, "Task 1", 1000, NULL, 1, NULL );
 
+    xTaskCreate(motherTask, "Mother Task", 10000, NULL, 8, NULL);
 
 #endif
 
@@ -131,14 +134,36 @@ void vAssertCalled(unsigned long ulLine, const char *const pcFileName)
     exit(-1);
 }
 
-
 #ifdef ERTS2_TASKMANAGEMENT
 // define your Task here @TODO
 
+void vTask(void *p)
+{
+    int c_time = (int)p;
 
+    TaskStatus_t xTaskDetails;
+    vTaskGetInfo(NULL, &xTaskDetails, pdFALSE, eInvalid);
 
+    printf("%s started at %dms\n", xTaskDetails.pcTaskName, xTaskGetTickCount() / portTICK_RATE_MS);
+    vTaskGetInfo(NULL, &xTaskDetails, pdFALSE, eInvalid);
+    TickType_t begin = xTaskDetails.ulRunTimeCounter;
+    while ((xTaskDetails.ulRunTimeCounter - begin) < pdMS_TO_TICKS(c_time / 10))
+        vTaskGetInfo(NULL, &xTaskDetails, pdFALSE, eInvalid);
+    printf("%s ended at %dms\n", xTaskDetails.pcTaskName, xTaskGetTickCount() / portTICK_RATE_MS);
 
+    vTaskDelete(NULL);
+}
 
+void motherTask(void *p)
+{
+    xTaskCreate(vTask, "Task 1", 10000, (void *)2000, 1, NULL);
+    vTaskDelay(200);
+    xTaskCreate(vTask, "Task 2", 10000, (void *)500, 1, NULL);
+    vTaskDelay(300);
+    xTaskCreate(vTask, "Task 3", 10000, (void *)1000, 1, NULL);
+
+    vTaskDelete(NULL);
+}
 
 #endif
 /* CH3_TASKMANAGEMENT ends */
