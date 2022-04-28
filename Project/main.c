@@ -101,6 +101,12 @@
 // example
 // void vTask1();
 
+void vTask(void *);
+
+void vTask1(void *);
+void vTask2(void *);
+void vTask3(void *);
+void vTask4(void *);
 
 #endif
 
@@ -112,6 +118,11 @@ int main(void)
     /* Creating Four Task with different Priorities and Delay*/
     // search and find xTaskCreate how it is work
     //	xTaskCreate( vTask1, "Task 1", 1000, NULL, 1, NULL );
+
+    xTaskCreate(vTask1, "Task 1", 10000, NULL, 4, NULL);
+    xTaskCreate(vTask2, "Task 2", 10000, NULL, 3, NULL);
+    xTaskCreate(vTask3, "Task 3", 10000, NULL, 2, NULL);
+    xTaskCreate(vTask4, "Task 4", 10000, NULL, 1, NULL);
 
 
 #endif
@@ -131,13 +142,105 @@ void vAssertCalled(unsigned long ulLine, const char *const pcFileName)
     exit(-1);
 }
 
-
 #ifdef ERTS2_TASKMANAGEMENT
 // define your Task here @TODO
 
+void vTask(void *p)
+{
+    int delay = (int)p;
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    for (;;)
+    {
+        printf("Hi. delay is %d\n", delay);
 
+        // vTaskDelay(pdMS_TO_TICKS(delay));
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(delay));
+    }
+}
 
+void vTask1(void *p)
+{
+    int c_time = 250, period = 5000, deadline = 2500;
+    TaskStatus_t xTaskDetails;
 
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    for (;;)
+    {
+        // start of execution time
+        printf("Task 1 started at %dms\n", xTaskGetTickCount() / portTICK_RATE_MS);
+        vTaskGetInfo(NULL, &xTaskDetails, pdFALSE, eInvalid);
+        TickType_t begin = xTaskDetails.ulRunTimeCounter;
+        while ((xTaskDetails.ulRunTimeCounter - begin) < pdMS_TO_TICKS(c_time / 10))
+            vTaskGetInfo(NULL, &xTaskDetails, pdFALSE, eInvalid);
+        printf("Task 1 ended at %dms\n", xTaskGetTickCount() / portTICK_RATE_MS);
+        // end of execution time
+
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(period));
+    }
+}
+
+void vTask2(void *p)
+{
+    int c_time = 500, period = 3000, deadline = 3000;
+    TaskStatus_t xTaskDetails;
+
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    for (;;)
+    {
+        // start of execution time
+        printf("Task 2 started at %dms\n", xTaskGetTickCount() / portTICK_RATE_MS);
+        vTaskGetInfo(NULL, &xTaskDetails, pdFALSE, eInvalid);
+        TickType_t begin = xTaskDetails.ulRunTimeCounter;
+        while ((xTaskDetails.ulRunTimeCounter - begin) < pdMS_TO_TICKS(c_time / 10))
+            vTaskGetInfo(NULL, &xTaskDetails, pdFALSE, eInvalid);
+        printf("Task 2 ended at %dms\n", xTaskGetTickCount() / portTICK_RATE_MS);
+        // end of execution time
+
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(period));
+    }
+}
+
+void vTask3(void *p)
+{
+    int c_time = 750, period = 2000, deadline = 3500;
+    TaskStatus_t xTaskDetails;
+
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    for (;;)
+    {
+        // start of execution time
+        printf("Task 3 started at %dms\n", xTaskGetTickCount() / portTICK_RATE_MS);
+        vTaskGetInfo(NULL, &xTaskDetails, pdFALSE, eInvalid);
+        TickType_t begin = xTaskDetails.ulRunTimeCounter;
+        while ((xTaskDetails.ulRunTimeCounter - begin) < pdMS_TO_TICKS(c_time / 10))
+            vTaskGetInfo(NULL, &xTaskDetails, pdFALSE, eInvalid);
+        printf("Task 3 ended at %dms\n", xTaskGetTickCount() / portTICK_RATE_MS);
+        // end of execution time
+
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(period));
+    }
+}
+
+void vTask4(void *p)
+{
+    int c_time = 1000, period = 4000, deadline = 5000;
+    TaskStatus_t xTaskDetails;
+
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    for (;;)
+    {
+        // start of execution time
+        printf("Task 4 started at %dms\n", xTaskGetTickCount() / portTICK_RATE_MS);
+        vTaskGetInfo(NULL, &xTaskDetails, pdFALSE, eInvalid);
+        TickType_t begin = xTaskDetails.ulRunTimeCounter;
+        while ((xTaskDetails.ulRunTimeCounter - begin) < pdMS_TO_TICKS(c_time / 10))
+            vTaskGetInfo(NULL, &xTaskDetails, pdFALSE, eInvalid);
+        printf("Task 4 ended at %dms\n", xTaskGetTickCount() / portTICK_RATE_MS);
+        // end of execution time
+
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(period));
+    }
+}
 
 
 #endif
