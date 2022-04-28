@@ -146,23 +146,40 @@ configIDLE_TASK_NAME in FreeRTOSConfig.h. */
 	} /* taskRECORD_READY_PRIORITY */
 
 	/*-----------------------------------------------------------*/
-
-	#define taskSELECT_HIGHEST_PRIORITY_TASK()															\
-	{																									\
-	UBaseType_t uxTopPriority = uxTopReadyPriority;														\
-																										\
-		/* Find the highest priority queue that contains ready tasks. */								\
-		while( listLIST_IS_EMPTY( &( pxReadyTasksLists[ uxTopPriority ] ) ) )							\
+	#if( configUSE_FCFS_SCHEDULER == 1 )
+		#define taskSELECT_HIGHEST_PRIORITY_TASK()														\
 		{																								\
-			configASSERT( uxTopPriority );																\
-			--uxTopPriority;																			\
-		}																								\
+		UBaseType_t uxTopPriority = uxTopReadyPriority;													\
 																										\
-		/* listGET_OWNER_OF_NEXT_ENTRY indexes through the list, so the tasks of						\
-		the	same priority get an equal share of the processor time. */									\
-		listGET_OWNER_OF_NEXT_ENTRY( pxCurrentTCB, &( pxReadyTasksLists[ uxTopPriority ] ) );			\
-		uxTopReadyPriority = uxTopPriority;																\
-	} /* taskSELECT_HIGHEST_PRIORITY_TASK */
+			/* Find the highest priority queue that contains ready tasks. */							\
+			while( listLIST_IS_EMPTY( &( pxReadyTasksLists[ uxTopPriority ] ) ) )						\
+			{																							\
+				configASSERT( uxTopPriority );															\
+				--uxTopPriority;																		\
+			}																							\
+																										\
+			/* listGET_OWNER_OF_HEAD_ENTRY just get first member of the list. */						\
+			pxCurrentTCB = listGET_OWNER_OF_HEAD_ENTRY( &( pxReadyTasksLists[ uxTopPriority ] ) );		\
+			uxTopReadyPriority = uxTopPriority;															\
+		} /* taskSELECT_HIGHEST_PRIORITY_TASK */
+	#else
+		#define taskSELECT_HIGHEST_PRIORITY_TASK()														\
+		{																								\
+		UBaseType_t uxTopPriority = uxTopReadyPriority;													\
+																										\
+			/* Find the highest priority queue that contains ready tasks. */							\
+			while( listLIST_IS_EMPTY( &( pxReadyTasksLists[ uxTopPriority ] ) ) )						\
+			{																							\
+				configASSERT( uxTopPriority );															\
+				--uxTopPriority;																		\
+			}																							\
+																										\
+			/* listGET_OWNER_OF_NEXT_ENTRY indexes through the list, so the tasks of					\
+			the	same priority get an equal share of the processor time. */								\
+			listGET_OWNER_OF_NEXT_ENTRY( pxCurrentTCB, &( pxReadyTasksLists[ uxTopPriority ] ) );		\
+			uxTopReadyPriority = uxTopPriority;															\
+		} /* taskSELECT_HIGHEST_PRIORITY_TASK */
+	#endif
 
 	/*-----------------------------------------------------------*/
 
@@ -232,11 +249,19 @@ count overflows. */
  * Place the task represented by pxTCB into the appropriate ready list for
  * the task.  It is inserted at the end of the list.
  */
-#define prvAddTaskToReadyList( pxTCB )																\
-	traceMOVED_TASK_TO_READY_STATE( pxTCB );														\
-	taskRECORD_READY_PRIORITY( ( pxTCB )->uxPriority );												\
-	vListInsertEnd( &( pxReadyTasksLists[ ( pxTCB )->uxPriority ] ), &( ( pxTCB )->xStateListItem ) ); \
-	tracePOST_MOVED_TASK_TO_READY_STATE( pxTCB )
+#if( configUSE_FCFS_SCHEDULER == 1 )
+	#define prvAddTaskToReadyList( pxTCB )																\
+		traceMOVED_TASK_TO_READY_STATE( pxTCB );														\
+		taskRECORD_READY_PRIORITY( ( pxTCB )->uxPriority );												\
+		vListInsert( &( pxReadyTasksLists[ ( pxTCB )->uxPriority ] ), &( ( pxTCB )->xStateListItem ) ); \
+		tracePOST_MOVED_TASK_TO_READY_STATE( pxTCB )
+#else
+	#define prvAddTaskToReadyList( pxTCB )																\
+		traceMOVED_TASK_TO_READY_STATE( pxTCB );														\
+		taskRECORD_READY_PRIORITY( ( pxTCB )->uxPriority );												\
+		vListInsertEnd( &( pxReadyTasksLists[ ( pxTCB )->uxPriority ] ), &( ( pxTCB )->xStateListItem ) ); \
+		tracePOST_MOVED_TASK_TO_READY_STATE( pxTCB )
+#endif
 /*-----------------------------------------------------------*/
 
 /*
@@ -334,6 +359,10 @@ typedef struct tskTaskControlBlock
 
 	#if( INCLUDE_xTaskAbortDelay == 1 )
 		uint8_t ucDelayAborted;
+	#endif
+	
+	#if( configUSE_FCFS_SCHEDULER == 1 )
+		TickType_t arrival_time;
 	#endif
 
 } tskTCB;
@@ -934,6 +963,10 @@ UBaseType_t x;
 	/* Set the pxNewTCB as a link back from the ListItem_t.  This is so we can get
 	back to	the containing TCB from a generic item in a list. */
 	listSET_LIST_ITEM_OWNER( &( pxNewTCB->xStateListItem ), pxNewTCB );
+	#if( configUSE_FCFS_SCHEDULER == 1 )
+		pxNewTCB->arrival_time = xTaskGetTickCount();
+		listSET_LIST_ITEM_VALUE( &( pxNewTCB->xStateListItem ), ( TickType_t ) pxNewTCB->arrival_time);
+	#endif
 
 	/* Event lists are always in priority order. */
 	listSET_LIST_ITEM_VALUE( &( pxNewTCB->xEventListItem ), ( TickType_t ) configMAX_PRIORITIES - ( TickType_t ) uxPriority ); /*lint !e961 MISRA exception as the casts are only redundant for some ports. */
