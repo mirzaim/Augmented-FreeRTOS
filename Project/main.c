@@ -108,6 +108,8 @@ void vTask2(void *);
 void vTask3(void *);
 void vTask4(void *);
 
+void vSporadicTask(void *);
+
 #endif
 
 void vApplicationIdleHook(void);
@@ -124,6 +126,7 @@ int main(void)
     xTaskCreate(vTask3, "Task 3", 10000, NULL, 2, NULL);
     xTaskCreate(vTask4, "Task 4", 10000, NULL, 1, NULL);
 
+    xTaskCreate(vSporadicTask, "Sporadic Task", 10000, NULL, 8, NULL);
 
 #endif
 
@@ -242,6 +245,27 @@ void vTask4(void *p)
     }
 }
 
+void vSporadicTask(void *p)
+{
+    int c_time = 100, min_period = 3000;
+    TaskStatus_t xTaskDetails;
+    srand(43);
+
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    for (;;)
+    {
+        // start of execution time
+        printf("Sporadic Task started at %dms\n", xTaskGetTickCount() / portTICK_RATE_MS);
+        vTaskGetInfo(NULL, &xTaskDetails, pdFALSE, eInvalid);
+        TickType_t begin = xTaskDetails.ulRunTimeCounter;
+        while ((xTaskDetails.ulRunTimeCounter - begin) < pdMS_TO_TICKS(c_time / 10))
+            vTaskGetInfo(NULL, &xTaskDetails, pdFALSE, eInvalid);
+        printf("Sporadic Task ended at %dms\n", xTaskGetTickCount() / portTICK_RATE_MS);
+        // end of execution time
+
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(min_period + (rand() % 4096)));
+    }
+}
 
 #endif
 /* CH3_TASKMANAGEMENT ends */
