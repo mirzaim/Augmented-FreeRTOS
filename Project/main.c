@@ -85,12 +85,11 @@
  *
  */
 
-
 /* Standard includes. */
 #include <stdio.h>
 #include <stdlib.h>
-#include "FreeRTOS.h"		/* RTOS firmware */
-#include "task.h"			/* Task */
+#include "FreeRTOS.h" /* RTOS firmware */
+#include "task.h"     /* Task */
 #include "timers.h"
 //#include "queue.h"
 /* Examples */
@@ -99,7 +98,7 @@
 /* --------------------------------------------- */
 #ifdef ERTS2_TASKMANAGEMENT
 // you need make your task visible @TODO
-// example 
+// example
 // void vTask1();
 
 
@@ -107,34 +106,35 @@
 
 void vApplicationIdleHook(void);
 
-int main ( void )
+int main(void)
 {
 #ifdef ERTS2_TASKMANAGEMENT
-	/* Creating Four Task with different Priorities and Delay*/
-    // search and find xTaskCreate how it is work   
+    /* Creating Four Task with different Priorities and Delay*/
+    // search and find xTaskCreate how it is work
     //	xTaskCreate( vTask1, "Task 1", 1000, NULL, 1, NULL );
 
 
 #endif
 
-	vTaskStartScheduler();
-	return 0;
+    vTaskStartScheduler();
+    return 0;
 }
 
-void vAssertCalled( unsigned long ulLine, const char * const pcFileName )
+void vAssertCalled(unsigned long ulLine, const char *const pcFileName)
 {
- 	taskENTER_CRITICAL();
-	{
+    taskENTER_CRITICAL();
+    {
         printf("[ASSERT] %s:%lu\n", pcFileName, ulLine);
         fflush(stdout);
-	}
-	taskEXIT_CRITICAL();
-	exit(-1);
+    }
+    taskEXIT_CRITICAL();
+    exit(-1);
 }
 
 
 #ifdef ERTS2_TASKMANAGEMENT
-//define your Task here @TODO
+// define your Task here @TODO
+
 
 
 
@@ -143,9 +143,8 @@ void vAssertCalled( unsigned long ulLine, const char * const pcFileName )
 #endif
 /* CH3_TASKMANAGEMENT ends */
 
-
 void vApplicationIdleHook(void)
 {
-//	printf("Idle\r\n");
+    // printf("Idle\r\n");
 }
 /*-----------------------------------------------------------*/
