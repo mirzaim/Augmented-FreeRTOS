@@ -103,6 +103,8 @@
 
 void vTask(void *);
 
+void vTaskManager(void *);
+
 void vTask1(void *);
 void vTask2(void *);
 void vTask3(void *);
@@ -127,6 +129,8 @@ int main(void)
     xTaskCreate(vTask4, "Task 4", 10000, NULL, 1, NULL);
 
     xTaskCreate(vSporadicTask, "Sporadic Task", 10000, NULL, 8, NULL);
+
+    xTaskCreate(vTaskManager, "Task Manager", 10000, NULL, 7, NULL);
 
 #endif
 
@@ -158,6 +162,24 @@ void vTask(void *p)
 
         // vTaskDelay(pdMS_TO_TICKS(delay));
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(delay));
+    }
+}
+
+void vTaskManager(void *p)
+{
+    int period = 2000;
+    TaskHandle_t task1_handler = xTaskGetHandle("Task 1");
+
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    for (;;)
+    {
+        vTaskSuspend(task1_handler);
+        printf("Task1 suspended.\n");
+        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskResume(task1_handler);
+        printf("Task1 resumed.\n");
+
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(period));
     }
 }
 
