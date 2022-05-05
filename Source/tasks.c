@@ -147,22 +147,40 @@ configIDLE_TASK_NAME in FreeRTOSConfig.h. */
 
 	/*-----------------------------------------------------------*/
 
-	#define taskSELECT_HIGHEST_PRIORITY_TASK()															\
-	{																									\
-	UBaseType_t uxTopPriority = uxTopReadyPriority;														\
-																										\
-		/* Find the highest priority queue that contains ready tasks. */								\
-		while( listLIST_IS_EMPTY( &( pxReadyTasksLists[ uxTopPriority ] ) ) )							\
+	#if( configUSE_RM_SCHEDULER == 1 )
+		#define taskSELECT_HIGHEST_PRIORITY_TASK()														\
 		{																								\
-			configASSERT( uxTopPriority );																\
-			--uxTopPriority;																			\
-		}																								\
+		UBaseType_t uxTopPriority = uxTopReadyPriority;													\
 																										\
-		/* listGET_OWNER_OF_NEXT_ENTRY indexes through the list, so the tasks of						\
-		the	same priority get an equal share of the processor time. */									\
-		listGET_OWNER_OF_NEXT_ENTRY( pxCurrentTCB, &( pxReadyTasksLists[ uxTopPriority ] ) );			\
-		uxTopReadyPriority = uxTopPriority;																\
-	} /* taskSELECT_HIGHEST_PRIORITY_TASK */
+			/* Find the highest priority queue that contains ready tasks. */							\
+			while( listLIST_IS_EMPTY( &( pxReadyTasksLists[ uxTopPriority ] ) ) )						\
+			{																							\
+				configASSERT( uxTopPriority );															\
+				--uxTopPriority;																		\
+			}																							\
+																										\
+			/* listGET_OWNER_OF_HEAD_ENTRY just get first member of the list. */						\
+			pxCurrentTCB = listGET_OWNER_OF_HEAD_ENTRY( &( pxReadyTasksLists[ uxTopPriority ] ) );		\
+			uxTopReadyPriority = uxTopPriority;															\
+		} /* taskSELECT_HIGHEST_PRIORITY_TASK */
+	#else
+		#define taskSELECT_HIGHEST_PRIORITY_TASK()														\
+		{																								\
+		UBaseType_t uxTopPriority = uxTopReadyPriority;													\
+																										\
+			/* Find the highest priority queue that contains ready tasks. */							\
+			while( listLIST_IS_EMPTY( &( pxReadyTasksLists[ uxTopPriority ] ) ) )						\
+			{																							\
+				configASSERT( uxTopPriority );															\
+				--uxTopPriority;																		\
+			}																							\
+																										\
+			/* listGET_OWNER_OF_NEXT_ENTRY indexes through the list, so the tasks of					\
+			the	same priority get an equal share of the processor time. */								\
+			listGET_OWNER_OF_NEXT_ENTRY( pxCurrentTCB, &( pxReadyTasksLists[ uxTopPriority ] ) );		\
+			uxTopReadyPriority = uxTopPriority;															\
+		} /* taskSELECT_HIGHEST_PRIORITY_TASK */
+	#endif
 
 	/*-----------------------------------------------------------*/
 
@@ -232,11 +250,19 @@ count overflows. */
  * Place the task represented by pxTCB into the appropriate ready list for
  * the task.  It is inserted at the end of the list.
  */
-#define prvAddTaskToReadyList( pxTCB )																\
-	traceMOVED_TASK_TO_READY_STATE( pxTCB );														\
-	taskRECORD_READY_PRIORITY( ( pxTCB )->uxPriority );												\
-	vListInsertEnd( &( pxReadyTasksLists[ ( pxTCB )->uxPriority ] ), &( ( pxTCB )->xStateListItem ) ); \
-	tracePOST_MOVED_TASK_TO_READY_STATE( pxTCB )
+#if( configUSE_RM_SCHEDULER == 1 )
+	#define prvAddTaskToReadyList( pxTCB )																\
+		traceMOVED_TASK_TO_READY_STATE( pxTCB );														\
+		taskRECORD_READY_PRIORITY( ( pxTCB )->uxPriority );												\
+		vListInsert( &( pxReadyTasksLists[ ( pxTCB )->uxPriority ] ), &( ( pxTCB )->xStateListItem ) ); \
+		tracePOST_MOVED_TASK_TO_READY_STATE( pxTCB )
+#else
+	#define prvAddTaskToReadyList( pxTCB )																\
+		traceMOVED_TASK_TO_READY_STATE( pxTCB );														\
+		taskRECORD_READY_PRIORITY( ( pxTCB )->uxPriority );												\
+		vListInsertEnd( &( pxReadyTasksLists[ ( pxTCB )->uxPriority ] ), &( ( pxTCB )->xStateListItem ) ); \
+		tracePOST_MOVED_TASK_TO_READY_STATE( pxTCB )
+#endif
 /*-----------------------------------------------------------*/
 
 /*
@@ -334,6 +360,10 @@ typedef struct tskTaskControlBlock
 
 	#if( INCLUDE_xTaskAbortDelay == 1 )
 		uint8_t ucDelayAborted;
+	#endif
+
+	#if( configUSE_RM_SCHEDULER == 1 )
+		TickType_t period;
 	#endif
 
 } tskTCB;
@@ -729,12 +759,22 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 
 #if( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
 
+	#if( configUSE_RM_SCHEDULER == 1 )
+	BaseType_t xTaskCreate(	TaskFunction_t pxTaskCode,
+							const char * const pcName,		/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
+							const configSTACK_DEPTH_TYPE usStackDepth,
+							void * const pvParameters,
+							UBaseType_t uxPriority,
+							TickType_t period,
+							TaskHandle_t * const pxCreatedTask )
+	#else
 	BaseType_t xTaskCreate(	TaskFunction_t pxTaskCode,
 							const char * const pcName,		/*lint !e971 Unqualified char types are allowed for strings and single characters only. */
 							const configSTACK_DEPTH_TYPE usStackDepth,
 							void * const pvParameters,
 							UBaseType_t uxPriority,
 							TaskHandle_t * const pxCreatedTask )
+	#endif
 	{
 	TCB_t *pxNewTCB;
 	BaseType_t xReturn;
@@ -806,6 +846,10 @@ static void prvAddNewTaskToReadyList( TCB_t *pxNewTCB ) PRIVILEGED_FUNCTION;
 			#endif /* configSUPPORT_STATIC_ALLOCATION */
 
 			prvInitialiseNewTask( pxTaskCode, pcName, ( uint32_t ) usStackDepth, pvParameters, uxPriority, pxCreatedTask, pxNewTCB, NULL );
+			#if( configUSE_RM_SCHEDULER == 1 )
+				pxNewTCB->period = period;
+				listSET_LIST_ITEM_VALUE( &( pxNewTCB->xStateListItem ), ( TickType_t ) pxNewTCB->period);
+			#endif
 			prvAddNewTaskToReadyList( pxNewTCB );
 			xReturn = pdPASS;
 		}
@@ -1937,6 +1981,9 @@ BaseType_t xReturn;
 								configMINIMAL_STACK_SIZE,
 								( void * ) NULL,
 								( tskIDLE_PRIORITY | portPRIVILEGE_BIT ),
+								#if( configUSE_RM_SCHEDULER == 1 )
+								NULL,
+								#endif
 								&xIdleTaskHandle ); /*lint !e961 MISRA exception, justified as it is not a redundant explicit cast to all supported compilers. */
 	}
 	#endif /* configSUPPORT_STATIC_ALLOCATION */

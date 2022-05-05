@@ -259,6 +259,9 @@ BaseType_t xReturn = pdFAIL;
 									configTIMER_TASK_STACK_DEPTH,
 									NULL,
 									( ( UBaseType_t ) configTIMER_TASK_PRIORITY ) | portPRIVILEGE_BIT,
+									#if( configUSE_RM_SCHEDULER == 1 )
+									NULL,
+									#endif
 									&xTimerTaskHandle );
 		}
 		#endif /* configSUPPORT_STATIC_ALLOCATION */
